@@ -5,7 +5,7 @@
  * @format
  */
 
-import React from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import type {PropsWithChildren} from 'react';
 import {
   SafeAreaView,
@@ -15,6 +15,7 @@ import {
   Text,
   useColorScheme,
   View,
+  Button
 } from 'react-native';
 
 import {
@@ -28,6 +29,60 @@ import {
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
+
+//Nesse código, toda mudança de estado do componente pai, o componente filho será renderizado também.
+// const Filho = ({ atualiza }) => {
+//   console.log("FILHO ATUALIZOU");
+//   return <Button title="Adicionar +1 filho" onPress={() => atualiza(3)}>Atualiza</Button>;
+// }
+
+// function Pai() {
+//   console.log("PAI ATUALIZOU");
+
+//   const [counter, setCounter] = useState(0);
+
+//   const atualiza = (novoValor) => {
+//     console.log("novoValor", novoValor)
+//   }
+
+//   return (
+//     <>
+//       <Text>{counter}</Text>
+//       <Button title="Adicionar +1 pai" onPress={() => setCounter((c) => c+ 1)}/>
+//       <Filho atualiza={atualiza}/>
+//     </>
+//   );
+// }
+
+//skips re-rendering a component when its props are unchanged\
+//prefered to use with child components
+const Filho = memo(({ atualiza }) => {
+  console.log("FILHO ATUALIZOU");
+  return <Button title="Adicionar +1 filho" onPress={() => atualiza(3)}>Atualiza</Button>;
+});
+
+function Pai() {
+  console.log("PAI ATUALIZOU");
+
+  const [counter, setCounter] = useState(0);
+
+  //cache a funcion definition between re-renders
+  //On the following renders, React, will compare the dependencies, with the dependencies you passed during
+  //the previous render. If none of the dependencies have changed, will return the same function as before.
+  const atualiza = useCallback((novoValor) => {
+    console.log("novoValor", novoValor)
+  }, []);
+  
+  //como a função useCallback está cacheada, a prop passada para o componente filho nunca é alterada,
+  //e como o componente filho está usando a função memo, ele não será renderizado até que a função do useCallback seja alterada
+  return (
+    <>
+      <Text>{counter}</Text>
+      <Button title="Adicionar +1 pai" onPress={() => setCounter((c) => c+ 1)}/>
+      <Filho atualiza={atualiza}/>
+    </>
+  );
+}
 
 function Section({children, title}: SectionProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -83,6 +138,7 @@ function App(): React.JSX.Element {
           <Section title="See Your Changes">
             <ReloadInstructions />
           </Section>
+          <Pai></Pai>
           <Section title="Debug">
             <DebugInstructions />
           </Section>
