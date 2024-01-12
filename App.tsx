@@ -5,8 +5,8 @@
  * @format
  */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useState } from 'react';
+import type { PropsWithChildren } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -16,6 +16,8 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 import {
   Colors,
@@ -29,7 +31,10 @@ type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
-function Section({children, title}: SectionProps): React.JSX.Element {
+
+
+
+function Section({ children, title }: SectionProps): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
   return (
     <View style={styles.sectionContainer}>
@@ -55,44 +60,65 @@ function Section({children, title}: SectionProps): React.JSX.Element {
   );
 }
 
+function getColor(i: number, numItems: number) {
+  const multiplier = 255 / (numItems - 1);
+  const colorVal = i * multiplier;
+  return `rgb(${colorVal}, ${Math.abs(128 - colorVal)}, ${255 - colorVal})`;
+}
+
+const getRandColorVal = () => Math.floor(Math.random() * 255);
+
+const mapIndexToData = (d: any, index: number, arr: any[]) => {
+  const backgroundColor = getColor(index, arr.length);
+  return {
+    text: `${index}`,
+    key: `key-${backgroundColor}`,
+    backgroundColor,
+  };
+}
+
+type Item = ReturnType<typeof mapIndexToData>;
+
+const NUM_ITEMS = 10;
+
+const initialData: Item[] = [...Array(NUM_ITEMS)].map(mapIndexToData);
+
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
+  const [data, setData] = useState(initialData);
+
 
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<Item>) => {
+    return (
+      <ScaleDecorator>
+        <TouchableOpacity
+          activeOpacity={1}
+          onLongPress={drag}
+          disabled={isActive}
+          style={[
+            styles.rowItem,
+            { backgroundColor: isActive ? "red" : item.backgroundColor },
+          ]}
+        >
+          <Text style={styles.text}>{item.text}</Text>
+        </TouchableOpacity>
+      </ScaleDecorator>
+    );
+  };
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <GestureHandlerRootView>
+      <DraggableFlatList
+        data={data}
+        onDragEnd={({ data }) => setData(data)}
+        keyExtractor={(item) => item.key}
+        renderItem={renderItem}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -112,6 +138,17 @@ const styles = StyleSheet.create({
   },
   highlight: {
     fontWeight: '700',
+  },
+  rowItem: {
+    height: 100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  text: {
+    color: "white",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 
